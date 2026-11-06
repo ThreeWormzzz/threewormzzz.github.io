@@ -143,6 +143,10 @@ a{color:inherit;text-decoration:none}
 .kpi div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .kpi b{display:block;font-family:var(--cond);font-size:22px;line-height:1.1}
 .kpi small{color:var(--mut);font-size:10.5px;letter-spacing:1px}
+.rad{margin:12px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px 6px}
+.rad h6{margin:0 8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:1px;color:var(--fg2)}
+.rad h6 span{font-weight:400;letter-spacing:0;color:var(--mut);font-size:11px}.rad h6 i{display:inline-block;width:14px;height:0;border-top:2px solid var(--acc1);vertical-align:middle;margin:0 4px 0 8px}.rad h6 i.av{border-top:2px dashed var(--mut)}
+.rad svg{display:block;width:100%;height:auto}
 .prog{margin:14px 0 4px;height:10px;border-radius:5px;background:rgba(0,0,0,.35);position:relative;overflow:hidden}
 .prog i{position:absolute;top:0;bottom:0;left:0;border-radius:5px}
 .prog .g{background:repeating-linear-gradient(90deg,rgba(195,255,60,.35) 0 6px,rgba(195,255,60,.2) 6px 8px)}
@@ -238,7 +242,7 @@ loanAt:c=>`租借在 ${c}`,until:y=>`合同至 ${y}`,soon:' · 快到期',
 back:'‹ 返回列表',nth:(i,n)=>`第 <b>${i}</b> / ${n}`,ovr:'能力',pot:'潜力',kAge:'年龄',kGrow:'成长空间',kRec:'推荐分',
 prog:(o,t)=>`当前 ${o} → 潜力 ${t}`,kClub:'俱乐部',kLoan:'租借',loanUntil:k=>`（至 ${k}）`,kEnd:'合同到期',soonP:'（快到期）',kNat:'国籍',kVal:'身价',kWage:'周薪',
 why:{df:'自由球员，直接谈合同就能签，不花转会费。',d1:'一档豪门：AI 通常标"不可出售"或要价远高于身价，可以试租借或等合同快到期。',d2:'强队：要价偏高、谈判容易卡住，多准备 1.5–2 倍身价。',d0:'普通球队：按身价 1.2–1.8 倍出价一般能谈下来。'},
-loanNote:' 租借球员要找母队谈。',btn:'在 SoFIFA 查看完整属性 ↗',
+loanNote:' 租借球员要找母队谈。',radT:'妖星指数',radMe:'本人',radAv:'同位置平均',rad:['潜力','能力','成长','年轻','价格','好买'],btn:'在 SoFIFA 查看完整属性 ↗',
 bh:{pen:'豪门照常上榜，推荐分扣分：一档 −3、强队 −1.5',none:'只看潜力和年龄，不管好不好买',hide2:'不列皇马 / 巴萨 / 曼城等一档豪门，后面的人补满 40',hide:'一档豪门和强队都不列，只留好买的'}
 },en:{
 name:'Wonderkid Radar',title:'Wonderkid Radar · FC27 wonderkids by position',tag:'Made by <b>ThreeWormzzz</b> · U23 · 40 per position',crumb:'Career Mode › Scouting › ',
@@ -267,7 +271,7 @@ loanAt:c=>`On loan at ${c}`,until:y=>`Contract to ${y}`,soon:' · expiring',
 back:'‹ Back to list',nth:(i,n)=>`#<b>${i}</b> / ${n}`,ovr:'OVR',pot:'POT',kAge:'Age',kGrow:'Growth',kRec:'Score',
 prog:(o,t)=>`Now ${o} → POT ${t}`,kClub:'Club',kLoan:'On loan',loanUntil:k=>` (until ${k})`,kEnd:'Contract ends',soonP:' (expiring)',kNat:'Nationality',kVal:'Value',kWage:'Wage',
 why:{df:'Free agent: agree a contract and sign, no transfer fee.',d1:'Elite club: the AI usually marks them not for sale or asks far above value. Try a loan, or wait until the contract is nearly up.',d2:'Strong club: high asking price and talks stall easily. Budget 1.5–2× value.',d0:'Regular club: bidding 1.2–1.8× value usually gets it done.'},
-loanNote:' Loanees must be bought from the parent club.',btn:'Full attributes on SoFIFA ↗',
+loanNote:' Loanees must be bought from the parent club.',radT:'RADAR',radMe:'Player',radAv:'Position avg',rad:['POT','OVR','Growth','Youth','Price','Buyable'],btn:'Full attributes on SoFIFA ↗',
 bh:{pen:'Big clubs stay listed with a score penalty: elite −3, strong −1.5',none:'Potential and age only, ignore how hard they are to buy',hide2:'Leave out Real Madrid / Barça / City and other elite clubs; the next players fill to 40',hide:'Leave out elite and strong clubs; easy buys only'}
 }};
 
@@ -330,6 +334,25 @@ function renderList(keepSel){
   $('#tbl').scrollTop=0;
   renderDet();
 }
+
+const clamp=v=>Math.max(0,Math.min(1,v)),lg=Math.log10;
+const RAX=x=>[clamp((x.t-78)/17),clamp((x.o-50)/40),clamp((x.t-x.o)/30),clamp((23-x.a)/7),
+  free(x)?1:clamp((lg(5e7)-lg(Math.max(x.vn,1)))/(lg(5e7)-lg(2e5))),free(x)||x.tier===0?1:x.tier===2?.5:.15];
+function radar(x){
+  const T=L_(),v=RAX(x),all=list.map(RAX),av=v.map((_,i)=>all.reduce((s,r)=>s+r[i],0)/all.length);
+  const cx=150,cy=112,R=74,P=(i,r)=>[cx+r*Math.sin(i*Math.PI/3),cy-r*Math.cos(i*Math.PI/3)];
+  const poly=(a,f)=>a.map((t,i)=>P(i,f(t)).map(n=>n.toFixed(1)).join(',')).join(' ');
+  const raw=[x.t,x.o,'+'+(x.t-x.o),T.age(x.a),free(x)?T.freeV:x.v,diff(x)[1]];
+  let g='';
+  for(const k of [.25,.5,.75,1])g+=`<polygon points="${poly(v,()=>R*k)}" fill="none" stroke="rgba(140,160,255,${k===1?.28:.13})"/>`;
+  for(let i=0;i<6;i++){const [a,b]=P(i,R);g+=`<line x1="${cx}" y1="${cy}" x2="${a.toFixed(1)}" y2="${b.toFixed(1)}" stroke="rgba(140,160,255,.13)"/>`;}
+  g+=`<polygon points="${poly(av,t=>R*t)}" fill="rgba(140,160,255,.08)" stroke="#7781a8" stroke-dasharray="4 3"/>`;
+  g+=`<polygon points="${poly(v,t=>R*t)}" fill="rgba(0,229,192,.22)" stroke="#00e5c0" stroke-width="2" stroke-linejoin="round"/>`;
+  v.forEach((t,i)=>{const [a,b]=P(i,R*t);g+=`<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="3" fill="#c3ff3c"/>`});
+  T.rad.forEach((n,i)=>{const [a,b]=P(i,R+20),an=Math.abs(a-cx)<4?'middle':a>cx?'start':'end',dy=i===0?-6:i===3?10:2;
+    g+=`<text x="${a.toFixed(1)}" y="${(b+dy).toFixed(1)}" text-anchor="${an}" font-size="11" fill="#7781a8">${n}</text><text x="${a.toFixed(1)}" y="${(b+dy+14).toFixed(1)}" text-anchor="${an}" font-size="12.5" font-weight="700" fill="#f2f5ff">${esc(raw[i])}</text>`});
+  return `<div class="rad"><h6>${T.radT}<span><i></i>${T.radMe}<i class="av"></i>${T.radAv}</span></h6><svg viewBox="0 0 300 236" role="img" aria-label="${T.radT}">${g}</svg></div>`;
+}
 function renderDet(){
   const x=list[sel];if(!x){$('#det').innerHTML='';return}
   const [dc,dz]=diff(x),ey=endYear(x),z=pz(cur),T=L_();
@@ -343,6 +366,7 @@ function renderDet(){
 <div class="dn">${esc(x.s)}</div><div class="dfull">${esc(x.n)}</div>
 <div class="dpos">${chips(x.ps,5)}</div>
 <div class="kpi"><div><b>${x.a}</b><small>${T.kAge}</small></div><div><b style="color:var(--acc1)">+${x.t-x.o}</b><small>${T.kGrow}</small></div><div><b>${rec(x).toFixed(1)}</b><small>${T.kRec}</small></div></div>
+${radar(x)}
 <div class="prog"><i class="g" style="width:${w(x.t)}%"></i><i class="o" style="width:${w(x.o)}%"></i></div>
 <div class="progl"><span>${L}</span><span>${T.prog(x.o,x.t)}</span><span>${R}</span></div>
 <div class="kv">
